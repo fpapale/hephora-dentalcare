@@ -1,92 +1,112 @@
-<!--
-  Backend Design per DentalCare MVP
--->
+# Design del Backend
 
-# Backend Design
+Questo documento riallinea il design del backend alle specifiche fondative definite nei seguenti documenti di progetto:
+- `docs/product-scope.md`
+- `docs/domain-model.md`
+- `docs/mvp-architecture.md`
+- `docs/implementation-plan.md`
+- `docs/architecture.md`
+- `docs/delivery-backlog.md`
 
 ## 1. Responsabilità del backend
-- Gestione dati persistenti (DB relazionale)
+- Gestione dei dati persistenti in database relazionali
 - Autenticazione e autorizzazione multi-tenant
-- Logica di business: scheduling, fatturazione, record clinici
-- API RESTful per frontend e integrazioni esterne
-- Monitoraggio, logging e auditing minimale
+- Logica di business per appuntamenti, fatturazione e scheda clinica
+- API RESTful per interfacce frontend e integrazioni esterne
+- Monitoraggio, logging e audit minimo delle operazioni critiche
 
 ## 2. Moduli backend principali
-- **Auth**: login, token JWT, gestione ruoli
-- **Tenant**: provisioning, isolamento dati
-- **Patients**: CRUD profili paziente e anamnesi
-- **Providers**: CRUD operatori (dentisti, igienisti)
-- **Appointments**: prenotazione, modifica, cancellazione
-- **ClinicalRecords**: visite, note, chart dentale
-- **Billing**: creazione fatture, pagamenti
-- **Audit**: registrazione modifiche critiche
+- **Auth Service**: login, gestione JWT, ruoli e permessi
+- **Tenant Service**: provisioning tenant e isolamento dati
+- **Patients Service**: CRUD profili pazienti e anamnesi
+- **Providers Service**: CRUD operatori (dentisti, igienisti)
+- **Appointments Service**: creazione, modifica e cancellazione appuntamenti
+- **ClinicalRecords Service**: gestione scheda clinica e materiali
+- **Billing Service**: emissione fatture, pagamenti e richieste assicurative
+- **Audit Service**: registrazione e conservazione di log critici
 
-## 3. API principali
-| Risorsa       | Endpoint                                  | Metodo | Descrizione                  |
-|---------------|-------------------------------------------|--------|------------------------------|
-| Auth          | POST /api/auth/login                      | POST   | Ottieni JWT                  |
-| Pazienti      | GET/POST/PUT/DELETE /api/patients         | CRUD   | Gestione profili pazienti    |
-| Appuntamenti  | GET/POST/PUT    /api/appointments         | CRUD   | Scheduling                   |
-| Visite        | GET/POST        /api/appointments/:id/visits    | CRUD   | Record clinici               |
-| Fatture       | GET/POST        /api/appointments/:id/invoices  | CRUD   | Gestione fatturazione        |
+## 3. Modello dati logico
+Lo schema dei dati, in linea con `docs/domain-model.md`, include le seguenti entità principali:
+- **Tenant**(id, nome, configurazione)
+- **User**(id, tenant_id, email, password_hash, ruolo)
+- **Patient**(id, tenant_id, nome, cognome, data_nascita, contatti)
+- **Provider**(id, tenant_id, nome, specializzazione)
+- **Appointment**(id, tenant_id, patient_id, provider_id, start, end, stato)
+- **Visit**(id, appointment_id, riepilogo, note, tooth_chart JSON)
+- **Invoice**(id, appointment_id, importo, stato, issued_at, paid_at)
+- **Claim**(id, invoice_id, dettagli_assicurazione, stato)
+- **AuditLog**(id, tenant_id, user_id, entita, entita_id, azione, timestamp)
 
-## 4. Schema dati logico
-- **Tenant**(id, name, config)
-- **User**(id, tenant_id, email, password_hash, role)
-- **Patient**(id, tenant_id, first_name, last_name, dob, contact)
-- **Provider**(id, tenant_id, name, specialty)
-- **Appointment**(id, tenant_id, patient_id, provider_id, start, end, status)
-- **Visit**(id, appointment_id, summary, notes, tooth_chart JSON)
-- **Invoice**(id, appointment_id, amount, status, issued_at, paid_at)
-- **AuditLog**(id, tenant_id, user_id, entity, entity_id, action, timestamp)
+## 4. Strategia multi-tenant
+- Utilizzo di uno schema condiviso con colonna `tenant_id` per ogni tabella
+- Filtri a livello di query per garantire l’isolamento dei dati
+- Middleware che estrae il contesto tenant dal token JWT
 
-## 5. Strategia multi-tenant
-- Schema condiviso con colonna `tenant_id` per ogni entità
-- Filtri a livello di query per isolamento dati
-- Middleware per validare contesto tenant da token JWT
+## 5. Autenticazione e autorizzazioni
+- Flusso OAuth2 per autenticazione e rilascio token JWT via `/api/auth/login`
+- Validazione token JWT ad ogni richiesta
+- Controllo accesso basato su ruoli: SysAdmin, AdminTenant, Operatore
 
-## 6. Utenti e ruoli
-- **SysAdmin**: crea tenant, gestisce configurazioni globali
-- **AdminTenant**: gestisce utenti e provider nel tenant
-- **Provider**: accesso alle proprie agende e record clinici
-- **Staff**: creazione e modifica appuntamenti e pazienti
+## 6. API principali
+| Risorsa            | Endpoint                                    | Metodo        | Descrizione                                 |
+|--------------------|---------------------------------------------|---------------|---------------------------------------------|
+| Auth               | `POST /api/auth/login`                      | POST          | Richiesta JWT                               |
+| Pazienti           | `GET/POST/PUT/DELETE /api/patients`         | CRUD          | Gestione profili pazienti                   |
+| Appuntamenti       | `GET/POST/PUT/DELETE /api/appointments`     | CRUD          | Gestione appuntamenti                       |
+| Visite             | `GET/POST /api/appointments/{id}/visits`    | CRUD          | Gestione visite e note cliniche             |
+| Fatture            | `GET/POST /api/appointments/{id}/invoices`  | CRUD          | Emissione fatture e gestione pagamenti      |
 
-## 7. Appuntamenti
-- Flusso: verifica disponibilità → prenotazione → conferma via email
-- Stati: pending, confirmed, cancelled, completed
-- Regole: no prenotazioni sovrapposte, policy di cancellazione
+## 7. Gestione appuntamenti
+- Stato: prenotato, confermato, annullato
+- Validazioni di disponibilità orari e risorse
+- Possibilità di invio promemoria automatici
 
-## 8. Pazienti
-- Profilo: anagrafica, contatti, preferenze
-- Associazione anamnesi e visite precedenti
-- Campi obbligatori: nome, cognome, data di nascita
+## 8. Gestione pazienti
+- Anagrafica completa con dati demografici e contatti
+- Archiviazione anamnesi e allergie
+- Validazione integrità e completezza dei dati
 
-## 9. Anamnesi
-- Tabella anamnesi con JSON per domande/risposte
-- Versioning con timestamped updates
-- FK verso Patient
+## 9. Gestione scheda clinica
+- Registrazione dettagliata di procedure e materiali
+- Chart dentale in formato JSON
+- Collegamento a visite e appuntamenti
 
-## 10. Visite e note cliniche
-- Record associato ad Appointment
-- Campi: diagnosi, procedure, note libere, tooth_chart JSON
-- Possibilità di link a immagini o file esterni
+## 10. Gestione anamnesi
+- Storico medico e allergie del paziente
+- Annotazioni su condizioni croniche
+- Collegamento ad entità `Visit` e referto clinico
 
-## 11. Audit minimo
-- Log operazioni CRUD critiche (utente, paziente, appuntamento)
-- Tabella AuditLog con user, azione, dettagli, timestamp
+## 11. Gestione visite e note cliniche
+- Creazione e aggiornamento di record di visita
+- Inserimento di note, diagnosi e raccomandazioni
+- Generazione report sintetici per il paziente
 
-## 12. Rischi tecnici backend
-- Scalabilità DB con crescita dati
-- Concorrenza in prenotazioni real-time
-- Sicurezza JWT e isolamento tenant
-- Evoluzione schema e migrazioni
-- Backup e disaster recovery
+## 12. Data Access Layer
+- Pattern Repository con ORM (TypeORM/Sequelize)
+- Livello di astrazione per query e transazioni PostgreSQL
+- Migrazioni schema definite in `docs/domain-model.md`
 
-## 13. Primo piano di implementazione
-1. Setup progetto e connessione DB
-2. Modelli Tenant + Auth con JWT
-3. Entity Patient/Provider + CRUD
-4. Scheduling Appointments + regole business
-5. ClinicalRecords e AuditLog
-6. Billing e Invoice
-7. Test end-to-end e documentazione API
+## 13. Audit minimo
+- Registrazione di modifiche critiche tramite `AuditLog`
+- Memorizzazione di utente, azione e timestamp
+- Conservazione per requisiti di compliance
+
+## 14. Integrazione backend con Retell.ai e Twilio
+- Event Bus (RabbitMQ) per orchestrazione eventi
+- Invio SMS/email via Twilio per promemoria
+- Elaborazione conversazioni e sintesi vocale via Retell.ai
+
+## 15. Rischi tecnici
+- Complessità nella gestione multi-tenant e migrazioni schema
+- Latenza ed eventual consistency del bus di eventi
+- Disponibilità e tassi di errore delle integrazioni esterne
+- Gestione e protezione di dati sensibili (GDPR)
+
+## 16. Piano di implementazione backend
+Basato su `docs/implementation-plan.md`:
+| Fase | Componenti                   | Deliverables                                |
+|------|------------------------------|---------------------------------------------|
+| 1    | Core Service e schema DB     | Endpoint CRUD per pazienti e appuntamenti  |
+| 2    | Billing Service              | API fatturazione e pagamenti                |
+| 3    | Notification & integrazioni  | Reminder automatici (Twilio/Retell.ai)      |
+| 4    | Auth Service                 | Endpoint login e controllo ruoli            |
