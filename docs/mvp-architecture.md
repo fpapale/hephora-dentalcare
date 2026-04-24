@@ -1,1 +1,40 @@
-# MVP Architecture\n\nThis document summarizes the architecture and integration boundaries for the DentalCare MVP.\n\n## Overview\n- Multi-tenant cloud-based platform supporting multiple dental practices.\n- Web-based UI for appointment management, patient charting, and clinical notes.\n\n## Components\n- Tenant Management: Isolates data and configuration per dental practice.\n- Appointment Service: CRUD operations for scheduling and managing patient appointments.\n- Patient Chart Service: Stores anamnesis, clinical notes, and visit history.\n- Voice Integration Boundary:\n  - Uses Retell.ai for voice-to-text transcription.\n  - Uses Twilio for voice call handling and integration.\n  - Abstract interfaces to allow replacement or expansion of voice providers.\n\n## Data Storage\n- Centralized database with tenant-specific partitioning for multi-tenancy.\n\n## Security\n- Authentication and authorization scoped to tenant boundaries.\n- Data encryption and audit logging to ensure compliance.\n
+# Architettura MVP
+
+## Frontend
+- Single Page Application (React o Vue.js) con routing client-side.
+- Autenticazione via JWT e gestione token.
+- Interfaccia per CRUD, calendario e moduli clinici.
+
+## Backend
+- API RESTful in Node.js/Express o Python/FastAPI.
+- Autenticazione e autorizzazioni basate su JWT e RBAC.
+- Gestione multi-tenancy a livello di schema o row-based.
+
+## Database
+- PostgreSQL con schema separato per tenant o colonna `tenant_id`.
+- Migrazioni gestite da ORM (TypeORM, Sequelize o Alembic).
+
+## Multi-tenancy
+- Isolamento dati: schema-based o row-based.
+- Middleware per identificare tenant da JWT o header HTTP.
+
+## API
+- Endpoint versionati (`/api/v1/...`).
+- Validazione payload con JSON Schema o Pydantic.
+
+## Autenticazione e Autorizzazioni
+- JWT per autenticazione stateless.
+- RBAC per controllo accessi granulari.
+
+## Integrazione Retell.ai + Twilio
+- Modulo dedicato per orchestrare chiamate vocali.
+- Webhook per eventi e aggiornamento dello stato prenotazione.
+
+## Logging
+- Log centralizzati (winston, bunyan o loguru).
+- Audit log per operazioni sensibili.
+
+## Deployment MVP
+- Container Docker per frontend, backend e worker.
+- Orchestrazione con Kubernetes o Docker Compose.
+- Ambiente staging e production separate.

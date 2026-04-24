@@ -1,1 +1,40 @@
-# Domain Model\n\nThis document defines the main domain entities and their relationships for the DentalCare MVP.\n\n## Entities\n\n### Tenant\n- Represents a dental practice tenant in the platform.\n- Contains metadata about the practice.\n\n### Appointment\n- Represents an appointment scheduled by a patient at a tenant.\n- Attributes: date/time, status, assigned clinician, patient reference.\n\n### Patient\n- Patient record including demographic and contact details.\n- Belongs to one tenant.\n\n### Patient Chart\n- Contains anamnesis information and clinical notes (visit history).\n- One chart per patient.\n\n### Anamnesis\n- Patient medical history and relevant information collected.\n\n### Clinical Note\n- Notes captured during or after a patient visit.\n\n### Voice Integration Boundary\n- Defines integration points with Retell.ai and Twilio for voice communication and transcription.\n\n## Relationships\n- Tenant has many Patients and Appointments.\n- Patient has one Patient Chart.\n- Patient Chart contains Anamnesis and many Clinical Notes.\n- Appointments are linked to Patients and Clinicians.\n
+# Modello di Dominio
+
+## Tenant
+Rappresenta uno studio dentistico isolato, con configurazioni e dati indipendenti.
+
+## Studio Dentistico
+Entità associata al tenant, include metadata come nome, indirizzo e contatti.
+
+## Utenti e Ruoli
+- **Utente**: account con credenziali e profilo.
+- **Ruoli**: Amministratore, Dentista, Assistente con permessi differenziati.
+
+## Pazienti
+Anagrafica pazienti con dati personali e recapiti.
+
+## Appuntamenti
+- Data, ora e partecipanti (paziente, dentista, assistente).
+- Stato: programmato, confermato, cancellato.
+
+## Anamnesi
+Scheda anamnestica iniziale per ciascun paziente.
+
+## Visite
+Registro delle visite svolte, con data, orario e note cliniche.
+
+## Note Cliniche
+Annotazioni mediche dettagliate collegate a una visita.
+
+## Chiamate Vocali
+Log delle interazioni via Retell.ai + Twilio, con esiti e timestamp.
+
+## Audit Log
+Tracciamento minimo delle operazioni critiche (creazione, modifica, cancellazione).
+
+## Relazioni
+- Tenant 1–N Utenti, Pazienti, Appuntamenti.
+- Paziente 1–N Anamnesi, Visite.
+- Visita 1–N Note Cliniche.
+- Appuntamento N–1 Paziente, N–1 Dentista.
+- Chiamata Vocale legata a Appuntamento e Paziente.
