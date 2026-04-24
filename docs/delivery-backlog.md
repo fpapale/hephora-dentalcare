@@ -88,4 +88,3 @@
 - **Sprint 4 (2 settimane)**: Notifiche e integrazioni esterne  
 - **Demo interna** e raccolta feedback  
 - **Bugfix & polish** per demo cliente
-EOF && git add docs/delivery-backlog.md && git commit -m "Realign delivery backlog with foundational documentation"
